@@ -6,17 +6,17 @@ from .preprocessing import (
     CategoricalEncoder,
     FeatureScaler,
     create_preprocessing_pipeline,
-    preprocess_data
+    preprocess_data,
 )
 
 __all__ = [
-    'download_telco_data',
-    'verify_data',
-    'TelcoDataValidator',
-    'validate_dataframe',
-    'DataCleaner',
-    'CategoricalEncoder',
-    'FeatureScaler', 
-    'create_preprocessing_pipeline',
-    'preprocess_data',
+    "download_telco_data",
+    "verify_data",
+    "TelcoDataValidator",
+    "validate_dataframe",
+    "DataCleaner",
+    "CategoricalEncoder",
+    "FeatureScaler",
+    "create_preprocessing_pipeline",
+    "preprocess_data",
 ]

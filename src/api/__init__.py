@@ -8,18 +8,18 @@ from .schemas import (
     BatchPredictionResponse,
     HealthResponse,
     ModelInfoResponse,
-    ErrorResponse
+    ErrorResponse,
 )
 
 __all__ = [
-    'app',
-    'ModelLoader',
-    'get_model_loader',
-    'ChurnPredictionRequest',
-    'ChurnPredictionResponse',
-    'BatchPredictionRequest',
-    'BatchPredictionResponse',
-    'HealthResponse',
-    'ModelInfoResponse',
-    'ErrorResponse',
+    "app",
+    "ModelLoader",
+    "get_model_loader",
+    "ChurnPredictionRequest",
+    "ChurnPredictionResponse",
+    "BatchPredictionRequest",
+    "BatchPredictionResponse",
+    "HealthResponse",
+    "ModelInfoResponse",
+    "ErrorResponse",
 ]

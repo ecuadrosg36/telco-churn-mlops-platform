@@ -187,7 +187,7 @@ class TestCORSMiddleware:
 
     def test_cors_headers_present(self, client):
         """Test CORS headers are present in responses."""
-        response = client.options("/health")
+        response = client.options("/health", headers={"Origin": "http://localhost"})
 
         # CORS headers should be present
         assert (

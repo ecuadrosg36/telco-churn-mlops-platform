@@ -1,0 +1,120 @@
+# Manual Deployment Workflow
+# Triggered manually or on release creation
+
+name: Deploy
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  PYTHON_VERSION: '3.10'
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ secrets.GCP_REGION || 'us-central1' }}
+
+jobs:
+  deploy-api:
+    name: Deploy API to Cloud Run
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+      
+      - name: Configure Docker for GCR
+        run: |
+          gcloud auth configure-docker
+      
+      - name: Build and push Docker image
+        run: |
+          docker build -f Dockerfile.api -t gcr.io/${{ env.GCP_PROJECT_ID }}/telco-churn-api:${{ github.sha }} .
+          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/telco-churn-api:${{ github.sha }}
+      
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy telco-churn-api \
+            --image gcr.io/${{ env.GCP_PROJECT_ID }}/telco-churn-api:${{ github.sha }} \
+            --platform managed \
+            --region ${{ env.GCP_REGION }} \
+            --allow-unauthenticated \
+            --set-env-vars ENVIRONMENT=${{ github.event.inputs.environment || 'staging' }} \
+            --memory 2Gi \
+            --cpu 2 \
+            --min-instances 1 \
+            --max-instances 10
+      
+      - name: Get service URL
+        id: url
+        run: |
+          URL=$(gcloud run services describe telco-churn-api \
+            --platform managed \
+            --region ${{ env.GCP_REGION }} \
+            --format 'value(status.url)')
+          echo "url=$URL" >> $GITHUB_OUTPUT
+      
+      - name: Run health check
+        run: |
+          sleep 30  # Wait for service to be ready
+          curl -f ${{ steps.url.outputs.url }}/health || exit 1
+      
+      - name: Create deployment summary
+        run: |
+          echo "### Deployment Successful! 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ github.event.inputs.environment || 'staging' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Service URL:** ${{ steps.url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** gcr.io/${{ env.GCP_PROJECT_ID }}/telco-churn-api:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+
+  run-integration-tests:
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+    needs: [deploy-api]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          pip install requests pytest
+      
+      - name: Run API integration tests
+        run: |
+          # Placeholder for integration tests
+          echo "Running integration tests..."
+          # pytest tests/integration/ --api-url=${{ needs.deploy-api.outputs.url }}
+      
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Integration tests failed. Consider rollback."
+          # Add rollback logic here

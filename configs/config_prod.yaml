@@ -1,0 +1,34 @@
+# Production Environment Overrides
+
+# Full dataset
+data:
+  raw_dir: "gs://telco-churn-data/raw"  # Cloud storage
+  processed_dir: "gs://telco-churn-data/processed"
+  gold_dir: "gs://telco-churn-data/gold"
+  predictions_dir: "gs://telco-churn-data/predictions"
+
+# Production model configuration (full complexity)
+model:
+  baseline:
+    n_estimators: 100
+  
+  advanced:
+    n_estimators: 300
+    max_depth: 8
+    learning_rate: 0.05
+
+# Remote MLflow tracking server
+mlflow:
+  tracking_uri: "https://mlflow.example.com"  # Replace with actual MLflow server
+  
+# Production API settings
+api:
+  reload: false
+  workers: 4
+  log_level: "warning"
+  
+# Production logging
+logging:
+  level: "INFO"
+  file_config:
+    path: "/var/log/telco-churn/app.log"

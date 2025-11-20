@@ -1,0 +1,29 @@
+# Development Environment Overrides
+
+# Smaller dataset for faster iterations
+data:
+  sample_size: 1000  # Use subset for dev
+  
+# Reduced model complexity for faster training
+model:
+  baseline:
+    n_estimators: 10
+    max_depth: 5
+  
+  advanced:
+    n_estimators: 20
+    max_depth: 4
+
+# Local MLflow tracking
+mlflow:
+  tracking_uri: "./mlruns"
+
+# API with reload for development
+api:
+  reload: true
+  workers: 1
+  log_level: "debug"
+
+# More verbose logging
+logging:
+  level: "DEBUG"

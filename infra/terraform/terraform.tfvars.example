@@ -1,0 +1,24 @@
+# Terraform Configuration for Development Environment
+
+project_id             = "your-gcp-project-id"
+region                 = "us-central1"
+environment            = "dev"
+artifacts_bucket_name  = "telco-churn-artifacts-dev"
+
+# API Configuration
+api_service_name  = "telco-churn-api-dev"
+api_image         = "gcr.io/your-gcp-project-id/telco-churn-api:latest"
+api_memory_limit  = "2Gi"
+api_cpu_limit     = "2"
+api_min_instances = 0
+api_max_instances = 5
+
+# MLflow
+mlflow_tracking_uri = ""
+
+# Labels
+labels = {
+  project     = "telco-churn"
+  environment = "dev"
+  managed_by  = "terraform"
+}

@@ -1,0 +1,7 @@
+# Test fixtures - sample CSV data for testing
+customerID,gender,SeniorCitizen,Partner,Dependents,tenure,PhoneService,MultipleLines,InternetService,OnlineSecurity,OnlineBackup,DeviceProtection,TechSupport,StreamingTV,StreamingMovies,Contract,PaperlessBilling,PaymentMethod,MonthlyCharges,TotalCharges,Churn
+C001,Female,0,Yes,No,12,Yes,No,DSL,Yes,Yes,No,Yes,No,No,One year,Yes,Electronic check,65.6,787.2,No
+C002,Male,1,No,No,24,Yes,Yes,Fiber optic,No,No,Yes,No,Yes,Yes,Month-to-month,No,Mailed check,89.5,2148.0,Yes
+C003,Female,0,Yes,Yes,6,No,No phone service,No,No internet service,No internet service,No internet service,No internet service,No internet service,No internet service,Month-to-month,No,Mailed check,19.9,119.4,No
+C004,Male,0,No,Yes,36,Yes,No,DSL,Yes,No,Yes,Yes,No,No,Two year,No,Bank transfer (automatic),75.0,2700.0,No
+C005,Female,1,Yes,No,48,Yes,Yes,Fiber optic,Yes,Yes,Yes,Yes,Yes,Yes,Two year,Yes,Credit card (automatic),105.5,5064.0,No

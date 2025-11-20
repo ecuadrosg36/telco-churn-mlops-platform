@@ -45,7 +45,7 @@ jobs:
           python src/training/train_model.py --model-type both
       
       - name: Upload MLflow artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: mlflow-artifacts
           path: |

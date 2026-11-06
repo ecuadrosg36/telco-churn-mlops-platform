@@ -1,9 +1,8 @@
 # Telco Customer Churn MLOps Platform
 
-A **production-ready MLOps platform** for predicting customer churn in the telecommunications industry. Built with best practices for ML model development, deployment, monitoring, and infrastructure automation.
+An **MLOps project** that predicts customer churn for a telecom company: training with MLflow, a FastAPI service, Docker, GitHub Actions, and Terraform for GCP.
 
-[![CI/CD](https://github.com/yourusername/telco-churn-mlops-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/telco-churn-mlops-platform/actions)
-[![Coverage](https://codecov.io/gh/yourusername/telco-churn-mlops-platform/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/telco-churn-mlops-platform)
+[![CI/CD](https://github.com/ecuadrosg36/telco-churn-mlops-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/ecuadrosg36/telco-churn-mlops-platform/actions)
 
 ## 🎯 Features
 
@@ -21,15 +20,21 @@ A **production-ready MLOps platform** for predicting customer churn in the telec
 - **Model registry integration** with stage management (Staging/Production)
 
 ### Monitoring & Quality
-- **Evidently AI** for drift detection (data, target, quality)
-- **Comprehensive testing** with >70% code coverage
+- **Evidently AI** drift reports (data, target, quality), run by hand; nothing schedules them yet
+- **Tests** with pytest, which fails under 70% coverage (`--cov-fail-under=70`)
 - **Production logging** with JSON formatting and rotation
 
 ### DevOps & Infrastructure
 - **Docker containers** for API and training
 - **Docker Compose** for local development with MLflow
-- **GitHub Actions** CI/CD with automated testing, building, and deployment
+- **GitHub Actions**: CI on every push, deploy to Cloud Run when a release is published, and a weekly retrain (see below)
 - **Terraform modules** for GCP infrastructure (GCS, Cloud Run, IAM)
+
+### Not finished yet
+- **Weekly retrain** (`retrain.yml`, Sundays 02:00 UTC) failed on all 18 scheduled runs, and GitHub has since disabled it for inactivity. It needs the Kaggle secrets set before it can download data.
+- **Drift checks** are not scheduled or called by any job; `drift_detection.py` only runs when you call it.
+- **Placeholders**: `orchestration/airflow/dags/telco_churn_dag.py` and `scripts/download_data.py` are empty, and `src/main_pipeline.py` is one line. Use `src/data/download_data.py` to get the data.
+- **No alerts**: drift reports are HTML files; nothing sends alerts.
 
 ## 🚀 Quick Start
 
@@ -42,7 +47,7 @@ A **production-ready MLOps platform** for predicting customer churn in the telec
 ### 1. Clone & Setup
 
 ```bash
-git clone https://github.com/yourusername/telco-churn-mlops-platform.git
+git clone https://github.com/ecuadrosg36/telco-churn-mlops-platform.git
 cd telco-churn-mlops-platform
 
 # Create virtual environment
@@ -120,7 +125,7 @@ docker-compose up
 ┌─────────────────────────────────────────────────────────────┐
 │                    Monitoring                                │
 ├─────────────────────────────────────────────────────────────┤
-│  Evidently → Drift Reports → Alerts                         │
+│  Evidently → Drift Reports (HTML, run by hand)              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -159,7 +164,7 @@ python src/inference/batch_predict.py \
     --model-stage Production
 ```
 
-### Generate Drift Reports
+### Generate Drift Reports (manual)
 
 ```bash
 python src/monitoring/drift_detection.py \
@@ -226,7 +231,7 @@ telco-churn-mlops-platform/
 │   ├── monitoring/       # Drift detection
 │   ├── training/         # Model training
 │   └── logging_utils/    # Structured logging
-├── tests/                # Unit & integration tests
+├── tests/                # API, features, preprocessing, validators
 ├── configs/              # YAML configurations
 ├── infra/
 │   └── terraform/        # Infrastructure as code
@@ -251,10 +256,7 @@ telco-churn-mlops-platform/
 
 ## 📈 Model Performance
 
-| Model         | Accuracy | F1 Score | AUC   |
-|---------------|----------|----------|-------|
-| RandomForest  | 79.2%    | 55.1%    | 83.4% |
-| XGBoost       | 79.9%    | 56.1%    | 84.3% |
+No results are saved in the repo yet. Train the models (step 4) and compare runs in MLflow at `http://localhost:5000`; training logs accuracy, F1 and AUC for each model.
 
 ## 🤝 Contributing
 

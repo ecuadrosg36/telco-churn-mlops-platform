@@ -34,10 +34,11 @@ sys.path.insert(0, str(project_root))
 from src.config import get_config, get_data_paths, get_model_params, get_mlflow_config
 from src.data.validators import validate_dataframe
 from src.data.preprocessing import preprocess_data
-from src.features.feature_engineering import engineer_features
 from src.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
+
+SQLITE_PREFIX = "sqlite:///"
 
 
 def load_and_validate_data() -> pd.DataFrame:
@@ -167,19 +168,14 @@ def prepare_features(X_train, X_val, X_test, y_train, y_val, y_test) -> tuple:
     test_df[get_config().get("features.target")] = y_test.values
     X_test_prep, y_test_prep, _ = preprocess_data(test_df, fitted_pipeline=pipeline)
 
-    # Feature engineering (after preprocessing)
-    logger.info("Engineering features...")
-    X_train_eng = engineer_features(X_train_prep)
-    X_val_eng = engineer_features(X_val_prep)
-    X_test_eng = engineer_features(X_test_prep)
-
-    logger.info(f"✓ Feature preparation complete")
-    logger.info(f"  Final feature count: {X_train_eng.shape[1]}")
+    # Engineered features are built inside the pipeline, so the API gets them too
+    logger.info("✓ Feature preparation complete")
+    logger.info(f"  Final feature count: {X_train_prep.shape[1]}")
 
     return (
-        X_train_eng,
-        X_val_eng,
-        X_test_eng,
+        X_train_prep,
+        X_val_prep,
+        X_test_prep,
         y_train_prep,
         y_val_prep,
         y_test_prep,
@@ -295,7 +291,13 @@ def log_to_mlflow(model, pipeline, metrics, params, model_name: str):
     logger.info("=" * 60)
 
     mlflow_config = get_mlflow_config()
-    mlflow.set_tracking_uri(mlflow_config["tracking_uri"])
+    tracking_uri = mlflow_config["tracking_uri"]
+    if tracking_uri.startswith(SQLITE_PREFIX):
+        # SQLite creates the file but not its folder
+        Path(tracking_uri[len(SQLITE_PREFIX) :]).parent.mkdir(
+            parents=True, exist_ok=True
+        )
+    mlflow.set_tracking_uri(tracking_uri)
     mlflow.set_experiment(mlflow_config["experiment_name"])
 
     with mlflow.start_run(
@@ -309,10 +311,13 @@ def log_to_mlflow(model, pipeline, metrics, params, model_name: str):
         mlflow.log_metrics(metrics)
 
         # Log model
+        # cloudpickle: the model was trained in this run, so it is trusted
+        # (MLflow 3's default skops format rejects tree and XGBoost types)
         mlflow.sklearn.log_model(
             model,
             artifact_path="model",
             registered_model_name=mlflow_config["model_registry_name"],
+            serialization_format="cloudpickle",
         )
 
         # Log preprocessing pipeline

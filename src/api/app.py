@@ -34,7 +34,6 @@ from src.api.schemas import (
 from src.api.model_loader import get_model_loader
 from src.api.observability import TimedRoute, log_prediction, get_metrics
 from src.data.preprocessing import preprocess_data
-from src.features.feature_engineering import engineer_features
 from src.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
@@ -184,13 +183,10 @@ async def predict_churn(request: Request, customer: ChurnPredictionRequest):
         customer_dict = customer.dict(by_alias=True)
         df = pd.DataFrame([customer_dict])
 
-        # Preprocess features
-        X_processed, _, _ = preprocess_data(
+        # Preprocess features (the pipeline also builds the engineered features)
+        X_engineered, _, _ = preprocess_data(
             df, fitted_pipeline=model_loader.preprocessing_pipeline
         )
-
-        # Engineer features
-        X_engineered = engineer_features(X_processed)
 
         # Get prediction
         model = model_loader.model
@@ -258,13 +254,10 @@ async def predict_batch(request: Request, batch_request: BatchPredictionRequest)
         customers_data = [c.dict(by_alias=True) for c in batch_request.customers]
         df = pd.DataFrame(customers_data)
 
-        # Preprocess features
-        X_processed, _, _ = preprocess_data(
+        # Preprocess features (the pipeline also builds the engineered features)
+        X_engineered, _, _ = preprocess_data(
             df, fitted_pipeline=model_loader.preprocessing_pipeline
         )
-
-        # Engineer features
-        X_engineered = engineer_features(X_processed)
 
         # Get predictions
         model = model_loader.model

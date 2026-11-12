@@ -7,7 +7,7 @@ An **MLOps project** that predicts customer churn for a telecom company: trainin
 ## 🎯 Features
 
 ### Core ML Pipeline
-- **Automated data pipeline** with Kaggle API integration
+- **Automated data pipeline**: Kaggle API when credentials are set, otherwise IBM's public copy of the same dataset
 - **Feature engineering** with 6 domain-specific features
 - **Model training** with RandomForest and XGBoost
 - **MLflow tracking** for experiments, metrics, and model registry
@@ -27,11 +27,10 @@ An **MLOps project** that predicts customer churn for a telecom company: trainin
 ### DevOps & Infrastructure
 - **Docker containers** for API and training
 - **Docker Compose** for local development with MLflow
-- **GitHub Actions**: CI on every push, deploy to Cloud Run when a release is published, and a weekly retrain (see below)
+- **GitHub Actions**: CI on every push, deploy to Cloud Run when a release is published, and a weekly retrain (`retrain.yml`, Sundays 02:00 UTC) that downloads the data, trains both models and uploads the MLflow database and pipeline as a build artifact
 - **Terraform modules** for GCP infrastructure (GCS, Cloud Run, IAM)
 
 ### Not finished yet
-- **Weekly retrain** (`retrain.yml`, Sundays 02:00 UTC) failed on all 18 scheduled runs, and GitHub has since disabled it for inactivity. It needs the Kaggle secrets set before it can download data.
 - **Drift checks** are not scheduled or called by any job; `drift_detection.py` only runs when you call it.
 - **Placeholders**: `orchestration/airflow/dags/telco_churn_dag.py` and `scripts/download_data.py` are empty, and `src/main_pipeline.py` is one line. Use `src/data/download_data.py` to get the data.
 - **No alerts**: drift reports are HTML files; nothing sends alerts.
@@ -41,7 +40,7 @@ An **MLOps project** that predicts customer churn for a telecom company: trainin
 ### Prerequisites
 - Python 3.10+
 - Docker & Docker Compose
-- Kaggle API credentials
+- Kaggle API credentials (optional; without them the public IBM copy is used)
 - GCP account (for cloud deployment)
 
 ### 1. Clone & Setup
@@ -62,7 +61,7 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# Edit .env with your Kaggle credentials
+# Optional: add your Kaggle credentials to .env
 ```
 
 ### 3. Download Data

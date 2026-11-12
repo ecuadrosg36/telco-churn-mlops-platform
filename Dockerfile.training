@@ -31,7 +31,7 @@ ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
 # Environment variables for MLflow
-ENV MLFLOW_TRACKING_URI=./mlruns
+ENV MLFLOW_TRACKING_URI=sqlite:///mlruns/mlflow.db
 ENV ENVIRONMENT=prod
 
 # Non-root user for security

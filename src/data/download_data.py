@@ -6,7 +6,10 @@ Downloads the IBM Telco Customer Churn dataset and saves it to the raw data dire
 
 import os
 import sys
+import urllib.request
 from pathlib import Path
+from typing import Callable
+
 from dotenv import load_dotenv
 
 # Add project root to path for imports
@@ -23,25 +26,56 @@ load_dotenv()
 logger = setup_logger(__name__)
 
 
+DOWNLOAD_TIMEOUT_SECONDS = 60
+
+
+def _fetch_bytes(url: str) -> bytes:
+    """Fetch a URL over HTTPS and return the body."""
+    if not url.startswith("https://"):
+        raise ValueError(f"Refusing non-HTTPS download URL: {url}")
+    with urllib.request.urlopen(url, timeout=DOWNLOAD_TIMEOUT_SECONDS) as response:
+        return response.read()
+
+
+def download_public_copy(
+    url: str, target: Path, fetch: Callable[[str], bytes] = _fetch_bytes
+) -> Path:
+    """
+    Download the public copy of the dataset (no credentials needed).
+
+    Returns:
+        Path to the written CSV file
+
+    Raises:
+        RuntimeError: If the download fails or is empty
+    """
+    logger.info(f"Kaggle credentials not set; downloading public copy: {url}")
+    try:
+        content = fetch(url)
+    except (OSError, ValueError) as e:
+        raise RuntimeError(f"Public dataset download failed: {e}") from e
+    if not content:
+        raise RuntimeError(f"Public dataset download was empty: {url}")
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(content)
+    logger.info(f"✓ Dataset saved: {target} ({len(content) / 1024:.0f} KB)")
+    return target
+
+
 def download_telco_data() -> Path:
     """
-    Download Telco Customer Churn dataset from Kaggle.
+    Download Telco Customer Churn dataset.
+
+    Uses the Kaggle API when KAGGLE_USERNAME and KAGGLE_KEY are set,
+    otherwise the public IBM copy of the same dataset.
 
     Returns:
         Path to downloaded CSV file
 
     Raises:
-        EnvironmentError: If Kaggle credentials are not configured
         RuntimeError: If download fails
     """
-    # Check for Kaggle credentials
-    if not os.getenv("KAGGLE_USERNAME") or not os.getenv("KAGGLE_KEY"):
-        raise EnvironmentError(
-            "Kaggle credentials not found. Please set KAGGLE_USERNAME and "
-            "KAGGLE_KEY environment variables or create a .env file. "
-            "Get credentials from https://www.kaggle.com/account"
-        )
-
     config = get_config()
     data_paths = get_data_paths()
 
@@ -49,6 +83,11 @@ def download_telco_data() -> Path:
     kaggle_dataset = config.get("data.kaggle_dataset")
     kaggle_file = config.get("data.kaggle_file")
     raw_dir = data_paths["raw"]
+
+    if not os.getenv("KAGGLE_USERNAME") or not os.getenv("KAGGLE_KEY"):
+        return download_public_copy(
+            config.get("data.public_url"), raw_dir / kaggle_file
+        )
 
     logger.info(f"Downloading dataset: {kaggle_dataset}")
     logger.info(f"Target directory: {raw_dir}")

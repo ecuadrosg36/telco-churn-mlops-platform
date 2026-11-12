@@ -174,10 +174,12 @@ def get_model_params(model_type: str = "baseline") -> Dict[str, Any]:
         model_type: 'baseline' or 'advanced'
 
     Returns:
-        Dictionary of model parameters
+        Dictionary of model parameters, without the 'type' label
+        (it names the model and is not a constructor argument)
     """
     config = get_config()
-    return config.get(f"model.{model_type}", {})
+    params = config.get(f"model.{model_type}", {})
+    return {key: value for key, value in params.items() if key != "type"}
 
 
 def get_mlflow_config() -> Dict[str, str]:

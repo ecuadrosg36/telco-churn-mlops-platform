@@ -19,6 +19,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.config import get_config
+from src.features.feature_engineering import FeatureEngineer
 from src.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
@@ -68,7 +69,9 @@ class CategoricalEncoder(BaseEstimator, TransformerMixin):
 
     def __init__(self):
         self.config = get_config()
-        self.categorical_features = self.config.get("features.categorical_features")
+        self.categorical_features = self.config.get(
+            "features.categorical_features"
+        ) + self.config.get("features.engineered_categorical_features", [])
         self.target = self.config.get("features.target")
         self.encoders: Dict[str, LabelEncoder] = {}
 
@@ -166,11 +169,13 @@ def create_preprocessing_pipeline() -> Pipeline:
     Create sklearn preprocessing pipeline.
 
     Returns:
-        Pipeline with cleaning, encoding, and scaling steps
+        Pipeline with cleaning, feature engineering, encoding, and scaling steps
     """
     pipeline = Pipeline(
         [
             ("cleaner", DataCleaner()),
+            # Engineered features need raw months and dollars, so they run before encoding and scaling
+            ("features", FeatureEngineer()),
             ("encoder", CategoricalEncoder()),
             ("scaler", FeatureScaler()),
         ]

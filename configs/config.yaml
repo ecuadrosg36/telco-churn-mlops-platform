@@ -16,6 +16,8 @@ data:
   # Kaggle dataset
   kaggle_dataset: "blastchar/telco-customer-churn"
   kaggle_file: "WA_Fn-UseC_-Telco-Customer-Churn.csv"
+  # Same dataset, public copy from IBM; used when Kaggle credentials are not set
+  public_url: "https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv"
   
   # Train/val/test split ratios
   train_ratio: 0.70
@@ -50,6 +52,11 @@ features:
     - MonthlyCharges
     - TotalCharges
   
+  # Engineered bins to encode (built in the pipeline from raw tenure and MonthlyCharges)
+  engineered_categorical_features:
+    - tenure_bins
+    - monthly_charges_tier
+
   # Derived features to create
   engineered_features:
     - tenure_bins
@@ -88,7 +95,7 @@ model:
 
 # MLflow configuration
 mlflow:
-  tracking_uri: "./mlruns"
+  tracking_uri: "sqlite:///mlruns/mlflow.db"
   experiment_name: "telco-churn-prediction"
   model_registry_name: "telco-churn-model"
   

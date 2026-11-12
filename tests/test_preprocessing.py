@@ -5,6 +5,7 @@ Unit tests for data preprocessing module.
 import pytest
 import pandas as pd
 import numpy as np
+from pathlib import Path
 from src.data.preprocessing import (
     DataCleaner,
     CategoricalEncoder,
@@ -143,7 +144,8 @@ class TestPreprocessingPipeline:
         """Test pipeline is created with all steps."""
         pipeline = create_preprocessing_pipeline()
 
-        assert len(pipeline.steps) == 3
+        assert len(pipeline.steps) == 4
+        assert pipeline.named_steps["features"] is not None
         assert pipeline.named_steps["cleaner"] is not None
         assert pipeline.named_steps["encoder"] is not None
         assert pipeline.named_steps["scaler"] is not None
@@ -178,3 +180,50 @@ class TestPreprocessingPipeline:
 
         assert X_new is not None
         assert len(X_new) == len(new_data)
+
+
+class TestFeaturesInPipeline:
+    """Engineered features are built inside the pipeline, from raw values."""
+
+    def test_pipeline_runs_feature_engineering_before_encoding(self):
+        pipeline = create_preprocessing_pipeline()
+
+        step_names = list(pipeline.named_steps)
+
+        assert step_names.index("cleaner") < step_names.index("features")
+        assert step_names.index("features") < step_names.index("encoder")
+
+    def test_all_output_columns_are_numeric(self):
+        df = pd.read_csv(
+            Path(__file__).parent / "fixtures" / "sample_data.csv", comment="#"
+        )
+
+        X, _, _ = preprocess_data(df)
+
+        assert "tenure_bins" in X.columns
+        assert "monthly_charges_tier" in X.columns
+        assert all(pd.api.types.is_numeric_dtype(X[c]) for c in X.columns)
+
+    def test_tenure_bins_use_months_not_scaled_values(self):
+        df = pd.read_csv(
+            Path(__file__).parent / "fixtures" / "sample_data.csv", comment="#"
+        )
+        pipeline = create_preprocessing_pipeline()
+
+        pipeline.fit(df.drop("Churn", axis=1), df["Churn"])
+        encoder = pipeline.named_steps["encoder"]
+
+        assert set(encoder.encoders["tenure_bins"].classes_) <= {
+            "new",
+            "medium",
+            "long_term",
+        }
+        expected = pd.cut(
+            df["tenure"],
+            [0, 12, 36, np.inf],
+            labels=["new", "medium", "long_term"],
+            include_lowest=True,
+        )
+        assert set(encoder.encoders["tenure_bins"].classes_) == set(
+            expected.astype(str)
+        )

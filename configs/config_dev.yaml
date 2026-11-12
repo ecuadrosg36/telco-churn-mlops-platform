@@ -16,7 +16,7 @@ model:
 
 # Local MLflow tracking
 mlflow:
-  tracking_uri: "./mlruns"
+  tracking_uri: "sqlite:///mlruns/mlflow.db"
 
 # API with reload for development
 api:

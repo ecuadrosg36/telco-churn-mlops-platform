@@ -212,3 +212,40 @@ class TestErrorHandling:
         response = client.get("/predict")
 
         assert response.status_code == 405
+
+
+@pytest.mark.unit
+class TestPreprocessingPipelineGuard:
+    """Without its fitted pipeline the model must not serve: refitting per request gives wrong answers."""
+
+    def test_predict_returns_503_without_pipeline(
+        self, client, sample_churn_request, mock_loaded_model, monkeypatch
+    ):
+        monkeypatch.setattr(mock_loaded_model, "preprocessing_pipeline", None)
+
+        assert client.post("/predict", json=sample_churn_request).status_code == 503
+        assert client.get("/health").json()["model_loaded"] is False
+
+    def test_pipeline_comes_from_the_model_run(self, tmp_path, monkeypatch):
+        import joblib
+        from src.api import model_loader as ml
+
+        logged = tmp_path / "preprocessing_pipeline.pkl"
+        joblib.dump({"fitted_in": "run-123"}, logged)
+        requested = {}
+
+        def fake_download(run_id, artifact_path):
+            requested.update(run_id=run_id, artifact_path=artifact_path)
+            return str(logged)
+
+        monkeypatch.setattr(ml.mlflow.artifacts, "download_artifacts", fake_download)
+        loader = ml.get_model_loader()
+        monkeypatch.setattr(loader, "preprocessing_pipeline", None)
+
+        loader._load_preprocessing_pipeline("run-123")
+
+        assert requested == {
+            "run_id": "run-123",
+            "artifact_path": "pipeline/preprocessing_pipeline.pkl",
+        }
+        assert loader.preprocessing_pipeline == {"fitted_in": "run-123"}

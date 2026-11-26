@@ -6,6 +6,7 @@ Manages loading and caching of production models with automatic reloading.
 
 import sys
 import joblib
+import mlflow
 from pathlib import Path
 from typing import Optional, Tuple, Any
 from threading import Lock
@@ -95,28 +96,42 @@ class ModelLoader:
                 self.model_stage = versions[0]["stage"]
 
         # Load preprocessing pipeline
-        self._load_preprocessing_pipeline()
+        self._load_preprocessing_pipeline((self.model_metadata or {}).get("run_id"))
 
         logger.info(f"✓ Model loaded: v{self.model_version} ({self.model_stage})")
 
         return self.model, self.preprocessing_pipeline, self.model_metadata
 
-    def _load_preprocessing_pipeline(self) -> None:
-        """Load preprocessing pipeline from artifacts."""
-        artifacts_dir = project_root / "artifacts"
-        pipeline_path = artifacts_dir / "preprocessing_pipeline.pkl"
+    def _load_preprocessing_pipeline(self, run_id: Optional[str] = None) -> None:
+        """Load the preprocessing pipeline fitted with this model.
 
+        First choice is the copy logged in the model's own MLflow run, so model and pipeline always match.
+        The local artifacts/ file is a fallback that may come from a different training run.
+        """
+        if run_id:
+            try:
+                path = mlflow.artifacts.download_artifacts(
+                    run_id=run_id, artifact_path="pipeline/preprocessing_pipeline.pkl"
+                )
+                self.preprocessing_pipeline = joblib.load(path)
+                logger.info(f"✓ Preprocessing pipeline loaded from MLflow run {run_id}")
+                return
+            except Exception as e:
+                logger.warning(f"Could not load the pipeline from run {run_id}: {e}")
+
+        pipeline_path = project_root / "artifacts" / "preprocessing_pipeline.pkl"
         if not pipeline_path.exists():
-            logger.warning(
-                f"Preprocessing pipeline not found at {pipeline_path}. "
-                f"Some features may not work correctly."
+            # Without the fitted pipeline the API would fit a new one on each request; is_loaded() stays False.
+            logger.error(
+                f"No preprocessing pipeline in MLflow or at {pipeline_path}. Predictions are disabled."
             )
             self.preprocessing_pipeline = None
             return
 
-        logger.info(f"Loading preprocessing pipeline...")
+        logger.warning(
+            f"Using local pipeline {pipeline_path}; it may not match model v{self.model_version}."
+        )
         self.preprocessing_pipeline = joblib.load(pipeline_path)
-        logger.info("✓ Preprocessing pipeline loaded")
 
     def get_model_info(self) -> dict:
         """
@@ -125,8 +140,11 @@ class ModelLoader:
         Returns:
             Dictionary with model information
         """
-        if self.model is None:
-            return {"loaded": False, "message": "No model loaded"}
+        if not self.is_loaded():
+            return {
+                "loaded": False,
+                "message": "Model or preprocessing pipeline not loaded",
+            }
 
         return {
             "loaded": True,
@@ -136,8 +154,8 @@ class ModelLoader:
         }
 
     def is_loaded(self) -> bool:
-        """Check if model is loaded."""
-        return self.model is not None
+        """True only when both the model and its fitted preprocessing pipeline are loaded."""
+        return self.model is not None and self.preprocessing_pipeline is not None
 
 
 # Singleton instance getter
